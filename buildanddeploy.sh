@@ -1,7 +1,5 @@
 #!/bin/bash --
 
-# Usage ./buildanddeploy.sh <tenant> <avalondir> <implementationsdir> [<config/config-t2>]
-
 usage()
 {
 cat << EOF
@@ -57,6 +55,17 @@ do
 			;;
 	esac
 done
+
+# before doing anything check if system time matches internet time
+internettime=`curl -vs http://www.unixtimestamp.com/index.php 2>&1 | grep -o -m 1 '[0-9]\{10\}'`
+localtime=`date +%s`
+
+if [[ $localtime -lt $internettime ]]; then
+	echo "Local Time: $localtime"
+	echo "Internet Time: $internettime"
+	echo "Local timestamp does not match internet timestamp. Please update your VM time and re-run."
+	exit 1
+fi
 
 if [[ -z $tenant || -z $avalondir || -z $implementationsdir ]]; then
 	echo "Mandatory parameters missing."
@@ -131,7 +140,7 @@ else
 	scp -oStrictHostKeyChecking=no -P 2222 $implementationsdir/tools/release-management/package-$tag.sh ec2-user@${servers[0]}:~
 	if [ "$?" != "0" ]; then
 		echo "Failed to secure copy file to ${servers[0]}."
-		echo "Check if the server names have been changed and update $environment.txt as required."
+		echo "The server names for $environment might have changed. Run git pull to update the server names."
 		echo "Aborting build and deploy."
 		exit 1
 	else
